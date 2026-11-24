@@ -1,0 +1,33 @@
+name: Smoke testing pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run smoke marker
+        run: python -m pytest -m smoke --junitxml=results/junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-junit
+          path: results/junit.xml
+      - name: Publish results to the test platform
+        if: always()
+        env:
+          PLATFORM_URL: ${{ vars.TEST_PLATFORM_URL }}
+          PLATFORM_API_KEY: ${{ secrets.TEST_PLATFORM_API_KEY }}
+          EXECUTION_ID: ${{ vars.TEST_PLATFORM_EXECUTION_ID }}
+          JUNIT_PATH: results/junit.xml
+        run: python pipelines/scripts/publish_results.py

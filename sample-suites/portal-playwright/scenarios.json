@@ -1,0 +1,16 @@
+{
+  "scenarios": [
+    {
+      "name": "Portal heading is visible",
+      "fixture": "fixtures/portal.html",
+      "expect_text": "Customer portal",
+      "classification": "smoke"
+    },
+    {
+      "name": "Invoice table renders rows",
+      "fixture": "fixtures/portal.html",
+      "expect_text": "INV-1042",
+      "classification": "regression"
+    }
+  ]
+}

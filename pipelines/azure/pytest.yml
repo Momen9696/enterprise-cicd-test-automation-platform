@@ -1,0 +1,29 @@
+trigger:
+  branches:
+    include: [main]
+pr:
+  branches:
+    include: [main]
+pool:
+  vmImage: ubuntu-latest
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: "3.12"
+  - script: python -m pip install -r requirements.txt
+    displayName: Install test dependencies
+  - script: python -m pytest --junitxml=$(Build.ArtifactStagingDirectory)/junit.xml
+    displayName: Run pytest
+  - task: PublishTestResults@2
+    condition: always()
+    inputs:
+      testResultsFormat: JUnit
+      testResultsFiles: $(Build.ArtifactStagingDirectory)/junit.xml
+  - script: python pipelines/scripts/publish_results.py
+    displayName: Publish results to the test platform
+    condition: always()
+    env:
+      PLATFORM_URL: $(TEST_PLATFORM_URL)
+      PLATFORM_API_KEY: $(TEST_PLATFORM_API_KEY)
+      EXECUTION_ID: $(TEST_PLATFORM_EXECUTION_ID)
+      JUNIT_PATH: $(Build.ArtifactStagingDirectory)/junit.xml

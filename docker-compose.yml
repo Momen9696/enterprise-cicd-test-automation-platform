@@ -1,0 +1,47 @@
+name: cicd-test-platform
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: sqlite:////app/data/platform.db
+      PLATFORM_API_KEY: ${PLATFORM_API_KEY:-local-operator-key}
+      PLATFORM_VIEWER_KEY: ${PLATFORM_VIEWER_KEY:-local-viewer-key}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-local-webhook-secret}
+      SEED_ON_STARTUP: "true"
+      EXECUTION_INLINE: "false"
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GITHUB_REPOSITORY: ${GITHUB_REPOSITORY:-}
+      AZURE_ORG: ${AZURE_ORG:-}
+      AZURE_PROJECT: ${AZURE_PROJECT:-}
+      AZURE_PAT: ${AZURE_PAT:-}
+      NOTIFY_WEBHOOK_URL: ${NOTIFY_WEBHOOK_URL:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - platform-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  platform-data:

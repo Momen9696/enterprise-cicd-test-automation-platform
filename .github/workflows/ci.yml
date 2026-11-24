@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+      - name: Lint
+        run: ruff check backend scripts
+      - name: Security scan
+        run: bandit -c pyproject.toml -r backend/app -q
+      - name: Secret scan
+        run: python scripts/scan_secrets.py
+      - name: Dependency audit
+        run: pip-audit -r backend/requirements.txt
+      - name: Validate templates
+        run: python scripts/validate_templates.py
+      - name: Validate Docker files
+        run: python scripts/validate_docker.py
+      - name: Backend tests
+        run: pytest --junitxml=reports/junit-backend.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: reports/junit-backend.xml
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+      - name: Frontend typecheck
+        working-directory: frontend
+        run: npm run lint
+      - name: Frontend tests
+        working-directory: frontend
+        run: npm test -- --reporter=default --reporter=junit --outputFile=../reports/junit-frontend.xml
+      - name: Frontend build
+        working-directory: frontend
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-results
+          path: |
+            reports/junit-frontend.xml
+            frontend/dist
+
+  documentation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install template parser
+        run: python -m pip install -r backend/requirements.txt
+      - name: Validate documentation and templates
+        run: |
+          python scripts/validate_docs.py
+          python scripts/validate_templates.py
+          python scripts/scan_secrets.py

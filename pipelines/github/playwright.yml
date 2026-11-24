@@ -1,0 +1,33 @@
+name: Playwright pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright
+        run: python -m pip install playwright && python -m playwright install --with-deps chromium
+      - name: Run approved portal scenarios
+        run: python -m app.services.playwright_suite --suite sample-suites/portal-playwright --junit results/junit.xml --select all
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-junit
+          path: results/junit.xml
+      - name: Publish results to the test platform
+        if: always()
+        env:
+          PLATFORM_URL: ${{ vars.TEST_PLATFORM_URL }}
+          PLATFORM_API_KEY: ${{ secrets.TEST_PLATFORM_API_KEY }}
+          EXECUTION_ID: ${{ vars.TEST_PLATFORM_EXECUTION_ID }}
+          JUNIT_PATH: results/junit.xml
+        run: python pipelines/scripts/publish_results.py

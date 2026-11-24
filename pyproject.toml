@@ -1,0 +1,23 @@
+[project]
+name = "enterprise-cicd-test-automation-platform"
+version = "1.0.0"
+description = "Local CI/CD test automation management platform"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["backend"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["backend", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008", "E501"]
+
+[tool.bandit]
+exclude_dirs = ["backend/tests", "sample-suites"]
+skips = ["B101"]
